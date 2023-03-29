@@ -13,7 +13,6 @@ import (
 	"errors"
 	"fmt"
 	"hash"
-	"io"
 	"math"
 	"net/url"
 	"strconv"
@@ -21,7 +20,6 @@ import (
 
 	"github.com/sec51/convert"
 	"github.com/sec51/convert/bigendian"
-	"github.com/sec51/cryptoengine"
 	qr "github.com/sec51/qrcode"
 )
 
@@ -29,7 +27,6 @@ const (
 	backoff_minutes = 5 // this is the time to wait before verifying another token
 	max_failures    = 3 // total amount of failures, after that the user needs to wait for the backoff time
 	counter_size    = 8 // this is defined in the RFC 4226
-	message_type    = 0 // this is the message type for the crypto engine
 )
 
 var (
@@ -340,7 +337,6 @@ func (otp *Totp) QR() ([]byte, error) {
 // Sizes:         4        4      N     8       4        4        N         4          N      4     4          4               8                 4
 // Format: |total_bytes|key_size|key|counter|digits|issuer_size|issuer|account_size|account|steps|offset|total_failures|verification_time|hashFunction_type|
 // hashFunction_type: 0 = SHA1; 1 = SHA256; 2 = SHA512
-// The data is encrypted using the cryptoengine library (which is a wrapper around the golang NaCl library)
 // TODO:
 // 1- improve sizes. For instance the hashFunction_type could be a short.
 func (otp *Totp) ToBytes() ([]byte, error) {
@@ -454,64 +450,16 @@ func (otp *Totp) ToBytes() ([]byte, error) {
 		}
 	}
 
-	// encrypt the TOTP bytes
-	engine, err := cryptoengine.InitCryptoEngine(otp.issuer)
-	if err != nil {
-		return nil, err
-	}
-
-	// init the message to be encrypted
-	message, err := cryptoengine.NewMessage(buffer.String(), message_type)
-	if err != nil {
-		return nil, err
-	}
-
-	// encrypt it
-	encryptedMessage, err := engine.NewEncryptedMessage(message)
-	if err != nil {
-		return nil, err
-	}
-
-	return encryptedMessage.ToBytes()
+	return buffer.Bytes(), nil
 
 }
 
 // TOTPFromBytes converts a byte array to a totp object
 // it stores the state of the TOTP object, like the key, the current counter, the client offset,
 // the total amount of verification failures and the last time a verification happened
-func TOTPFromBytes(encryptedMessage []byte, issuer string) (*Totp, error) {
-
-	// init the cryptoengine
-	engine, err := cryptoengine.InitCryptoEngine(issuer)
-	if err != nil {
-		return nil, err
-	}
-
-	// decrypt the message
-	data, err := engine.Decrypt(encryptedMessage)
-	if err != nil {
-		return nil, err
-	}
-
-	// new reader
-	reader := bytes.NewReader([]byte(data.Text))
-
+func TOTPFromBytes(buffer []byte) *Totp {
 	// otp object
 	otp := new(Totp)
-
-	// get the length
-	length := make([]byte, 4)
-	_, err = reader.Read(length) // read the 4 bytes for the total length
-	if err != nil && err != io.EOF {
-		return otp, err
-	}
-
-	totalSize := bigendian.FromInt([4]byte{length[0], length[1], length[2], length[3]})
-	buffer := make([]byte, totalSize-4)
-	_, err = reader.Read(buffer)
-	if err != nil && err != io.EOF {
-		return otp, err
-	}
 
 	// skip the total bytes size
 	startOffset := 0
@@ -601,7 +549,7 @@ func TOTPFromBytes(encryptedMessage []byte, issuer string) (*Totp, error) {
 		otp.hashFunction = crypto.SHA1
 	}
 
-	return otp, err
+	return otp
 }
 
 // this method checks the proper initialization of the Totp object
