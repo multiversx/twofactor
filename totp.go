@@ -175,7 +175,6 @@ func (otp *Totp) Validate(userCode string) error {
 	otp.totalVerificationFailures++
 	otp.lastVerificationTime = time.Now().UTC() // important to have it in UTC
 
-	// if we got here everything is good
 	return InvalidCodeError
 }
 
