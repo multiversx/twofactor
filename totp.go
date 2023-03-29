@@ -30,8 +30,9 @@ const (
 )
 
 var (
-	initializationFailedError = errors.New("Totp has not been initialized correctly")
-	LockDownError             = errors.New("The verification is locked down, because of too many trials.")
+	initializationFailedError = errors.New("totp has not been initialized correctly")
+	LockDownError             = errors.New("the verification is locked down, because of too many trials")
+	InvalidCodeError          = errors.New("the code provided is invalid")
 )
 
 // WARNING: The `Totp` struct should never be instantiated manually!
@@ -175,7 +176,7 @@ func (otp *Totp) Validate(userCode string) error {
 	otp.lastVerificationTime = time.Now().UTC() // important to have it in UTC
 
 	// if we got here everything is good
-	return errors.New("Tokens mismatch.")
+	return InvalidCodeError
 }
 
 // Checks the time difference between the function call time and the parameter
