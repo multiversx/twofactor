@@ -1,6 +1,6 @@
 module github.com/multiversx/twofactor
 
-go 1.17
+go 1.18
 
 require (
 	github.com/sec51/convert v0.0.0-20151121170152-8ed1f399b5e0

@@ -337,7 +337,6 @@ func (otp *Totp) QR() ([]byte, error) {
 // Sizes:         4        4      N     8       4        4        N         4          N      4     4          4               8                 4
 // Format: |total_bytes|key_size|key|counter|digits|issuer_size|issuer|account_size|account|steps|offset|total_failures|verification_time|hashFunction_type|
 // hashFunction_type: 0 = SHA1; 1 = SHA256; 2 = SHA512
-// The data is encrypted using the cryptoengine library (which is a wrapper around the golang NaCl library)
 // TODO:
 // 1- improve sizes. For instance the hashFunction_type could be a short.
 func (otp *Totp) ToBytes() ([]byte, error) {
