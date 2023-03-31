@@ -13,6 +13,7 @@ import (
 	"errors"
 	"fmt"
 	"hash"
+	"io"
 	"math"
 	"net/url"
 	"strconv"
@@ -457,9 +458,26 @@ func (otp *Totp) ToBytes() ([]byte, error) {
 // TOTPFromBytes converts a byte array to a totp object
 // it stores the state of the TOTP object, like the key, the current counter, the client offset,
 // the total amount of verification failures and the last time a verification happened
-func TOTPFromBytes(buffer []byte) *Totp {
+func TOTPFromBytes(otpBytes []byte) (*Totp, error) {
+	// new reader
+	reader := bytes.NewReader(otpBytes)
+
 	// otp object
 	otp := new(Totp)
+
+	// get the length
+	length := make([]byte, 4)
+	_, err := reader.Read(length) // read the 4 bytes for the total length
+	if err != nil && err != io.EOF {
+		return otp, err
+	}
+
+	totalSize := bigendian.FromInt([4]byte{length[0], length[1], length[2], length[3]})
+	buffer := make([]byte, totalSize-4)
+	_, err = reader.Read(buffer)
+	if err != nil && err != io.EOF {
+		return otp, err
+	}
 
 	// skip the total bytes size
 	startOffset := 0
@@ -549,7 +567,7 @@ func TOTPFromBytes(buffer []byte) *Totp {
 		otp.hashFunction = crypto.SHA1
 	}
 
-	return otp
+	return otp, nil
 }
 
 // this method checks the proper initialization of the Totp object

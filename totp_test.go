@@ -168,7 +168,7 @@ func TestVerificationFailures(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	restoredOtp, err := TOTPFromBytes(data, otp.issuer)
+	restoredOtp, err := TOTPFromBytes(data)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -242,7 +242,7 @@ func TestSerialization(t *testing.T) {
 	}
 
 	// Convert it back from bytes to TOTP
-	deserializedOTP, err := TOTPFromBytes(otpData, otp.issuer)
+	deserializedOTP, err := TOTPFromBytes(otpData)
 	if err != nil {
 		t.Fatal(err)
 	}
