@@ -31,8 +31,10 @@ const (
 )
 
 var (
-	initializationFailedError = errors.New("Totp has not been initialized correctly")
-	LockDownError             = errors.New("The verification is locked down, because of too many trials.")
+	errInitializationFailed = errors.New("totp has not been initialized correctly")
+	errLockDown             = errors.New("the verification is locked down, too many trials")
+	errWrongCode            = errors.New("wrong code")
+	errEmptyCodeError       = errors.New("empty code")
 )
 
 // WARNING: The `Totp` struct should never be instantiated manually!
@@ -68,7 +70,7 @@ func (otp *Totp) getIntCounter() uint64 {
 	return bigendian.FromUint64(otp.counter)
 }
 
-// This function creates a new TOTP object
+// NewTOTP creates a new TOTP object
 // This is the function which is needed to start the whole process
 // account: usually the user email
 // issuer: the name of the company/service
@@ -110,7 +112,7 @@ func makeTOTP(key []byte, account, issuer string, hash crypto.Hash, digits int) 
 	return otp, nil
 }
 
-// This function validates the user provided token
+// Validate validates the user provided token
 // It calculates 3 different tokens. The current one, one before now and one after now.
 // The difference is driven by the TOTP step size
 // Based on which of the 3 steps it succeeds to validates, the client offset is updated.
@@ -128,12 +130,12 @@ func (otp *Totp) Validate(userCode string) error {
 
 	// verify that the token is valid
 	if userCode == "" {
-		return errors.New("User provided token is empty")
+		return errEmptyCodeError
 	}
 
 	// check against the total amount of failures
 	if otp.totalVerificationFailures >= max_failures && !validBackoffTime(otp.lastVerificationTime) {
-		return LockDownError
+		return errLockDown
 	}
 
 	if otp.totalVerificationFailures >= max_failures && validBackoffTime(otp.lastVerificationTime) {
@@ -175,8 +177,8 @@ func (otp *Totp) Validate(userCode string) error {
 	otp.totalVerificationFailures++
 	otp.lastVerificationTime = time.Now().UTC() // important to have it in UTC
 
-	// if we got here everything is good
-	return errors.New("Tokens mismatch.")
+	// if we got here, codes do not match
+	return errWrongCode
 }
 
 // Checks the time difference between the function call time and the parameter
@@ -208,7 +210,7 @@ func increment(ts int64, stepSize int) uint64 {
 	return n                           // convert n to little endian byte array
 }
 
-// Generates a new one time password with hmac-(HASH-FUNCTION)
+// OTP generates a new one time password with hmac-(HASH-FUNCTION)
 func (otp *Totp) OTP() (string, error) {
 
 	// verify the proper initialization
@@ -573,7 +575,7 @@ func TOTPFromBytes(otpBytes []byte) (*Totp, error) {
 // this method checks the proper initialization of the Totp object
 func totpHasBeenInitialized(otp *Totp) error {
 	if otp == nil || otp.key == nil || len(otp.key) == 0 {
-		return initializationFailedError
+		return errInitializationFailed
 	}
 	return nil
 }
